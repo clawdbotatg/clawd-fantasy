@@ -1,85 +1,76 @@
-
 "use client";
 
-import { useAccount } from "wagmi";
-import { Address } from "@scaffold-ui/components";
-import type { NextPage } from "next";
-import { hardhat } from "viem/chains";
+import { useState } from "react";
 import Link from "next/link";
-import { BugAntIcon, MagnifyingGlassIcon } from "@heroicons/react/24/outline";
-import { useTargetNetwork } from "~~/hooks/scaffold-eth";
+import { LeagueCard } from "~~/components/clawd-fantasy/LeagueCard";
+import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 
+const STATUS_TABS = ["All", "Created", "Active", "Settled", "Cancelled"];
 
-const Home: NextPage = () => {
-  const { address: connectedAddress } = useAccount();
-  const { targetNetwork } = useTargetNetwork();
+const Home = () => {
+  const [activeTab, setActiveTab] = useState(0);
+
+  const { data: leagueCount, isLoading } = useScaffoldReadContract({
+    contractName: "FantasyLeague",
+    functionName: "leagueCount",
+  });
+
+  const count = leagueCount ? Number(leagueCount) : 0;
+  const leagueIds = Array.from({ length: count }, (_, i) => i);
 
   return (
-    <>
-      <div className="flex items-center flex-col grow pt-10">
-        <div className="px-5">
-          <h1 className="text-center">
-            <span className="block text-2xl mb-2">Welcome to</span>
-            <span className="block text-4xl font-bold">Scaffold-ETH 2</span>
-            
-          </h1>
-          <div className="flex justify-center items-center space-x-2 flex-col">
-            <p className="my-2 font-medium">Connected Address:</p>
-            <Address
-              address={connectedAddress}
-              chain={targetNetwork}
-              blockExplorerAddressLink={
-                targetNetwork.id === hardhat.id ? `/blockexplorer/address/${connectedAddress}` : undefined
-              }
-            />
-          </div>
-          
-<p className="text-center text-lg">
-  Get started by editing{" "}
-  <code className="italic bg-base-300 text-base font-bold max-w-full break-words break-all inline-block">
-    packages/nextjs/app/page.tsx
-  </code>
-</p>
-<p className="text-center text-lg">
-  Edit your smart contract{" "}
-  <code className="italic bg-base-300 text-base font-bold max-w-full break-words break-all inline-block">
-    YourContract.sol
-  </code>{" "}
-  in{" "}
-  <code className="italic bg-base-300 text-base font-bold max-w-full break-words break-all inline-block">
-    packages/hardhat/contracts
-  </code>
-</p>
-
-        </div>
-
-        <div className="grow bg-base-300 w-full mt-16 px-8 py-12">
-          <div className="flex justify-center items-center gap-12 flex-col md:flex-row">
-            <div className="flex flex-col bg-base-100 px-10 py-10 text-center items-center max-w-xs rounded-3xl">
-              <BugAntIcon className="h-8 w-8 fill-secondary" />
-              <p>
-                Tinker with your smart contract using the{" "}
-                <Link href="/debug" passHref className="link">
-                  Debug Contracts
-                </Link>{" "}
-                tab.
-              </p>
-            </div>
-            <div className="flex flex-col bg-base-100 px-10 py-10 text-center items-center max-w-xs rounded-3xl">
-              <MagnifyingGlassIcon className="h-8 w-8 fill-secondary" />
-              <p>
-                Explore your local transactions with the{" "}
-                <Link href="/blockexplorer" passHref className="link">
-                  Block Explorer
-                </Link>{" "}
-                tab.
-              </p>
-            </div>
-          </div>
-        </div>
+    <div className="flex flex-col items-center px-4 py-8 max-w-4xl mx-auto w-full">
+      <div className="flex justify-between items-center w-full mb-6">
+        <h1 className="text-3xl font-bold">🦞 CLAWD Fantasy</h1>
+        <Link href="/create" className="btn bg-[#FF4136] text-white hover:bg-[#FF4136]/80">
+          + Create League
+        </Link>
       </div>
-    </>
+
+      <div className="tabs tabs-boxed mb-6 w-full justify-center">
+        {STATUS_TABS.map((tab, i) => (
+          <a key={tab} className={`tab ${activeTab === i ? "tab-active" : ""}`} onClick={() => setActiveTab(i)}>
+            {tab}
+          </a>
+        ))}
+      </div>
+
+      {isLoading ? (
+        <div className="flex justify-center py-12">
+          <span className="loading loading-spinner loading-lg text-[#FF4136]" />
+        </div>
+      ) : count === 0 ? (
+        <div className="text-center py-12 opacity-50">
+          <p className="text-xl mb-2">No leagues yet</p>
+          <p>Create the first one!</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
+          {leagueIds.map(id => (
+            <FilteredLeagueCard key={id} leagueId={id} filterStatus={activeTab === 0 ? null : activeTab - 1} />
+          ))}
+        </div>
+      )}
+    </div>
   );
+};
+
+const FilteredLeagueCard = ({ leagueId, filterStatus }: { leagueId: number; filterStatus: number | null }) => {
+  const { data: league } = useScaffoldReadContract({
+    contractName: "FantasyLeague",
+    functionName: "leagues",
+    args: [BigInt(leagueId)],
+  });
+
+  if (!league) return null;
+
+  const statusIndex = 9; // status is the 10th field
+  const leagueArray = league as unknown as unknown[];
+  const status = Number(leagueArray[statusIndex]);
+
+  if (filterStatus !== null && status !== filterStatus) return null;
+
+  return <LeagueCard leagueId={leagueId} />;
 };
 
 export default Home;
