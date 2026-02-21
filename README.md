@@ -1,83 +1,82 @@
-# 🏗 Scaffold-ETH 2
+# 🦞 CLAWD Fantasy
 
-<h4 align="center">
-  <a href="https://docs.scaffoldeth.io">Documentation</a> |
-  <a href="https://scaffoldeth.io">Website</a>
-</h4>
+**Fantasy sports, but for crypto wallets.** Pick the traders you think will win. Bet $CLAWD on it. Winner takes the pot.
 
-🧪 An open-source, up-to-date toolkit for building decentralized applications (dapps) on the Ethereum blockchain. It's designed to make it easier for developers to create and deploy smart contracts and build user interfaces that interact with those contracts.
+Built on Base with [Scaffold-ETH 2](https://scaffoldeth.io).
 
-> [!NOTE]
-> 🤖 Scaffold-ETH 2 is AI-ready! It has everything agents need to build on Ethereum. Check `.agents/`, `.claude/`, `.opencode` or `.cursor/` for more info.
+## How It Works
 
-⚙️ Built using NextJS, RainbowKit, Foundry, Wagmi, Viem, and Typescript.
+Imagine fantasy football, but instead of picking NFL players, you pick **onchain wallet addresses** — traders you think will outperform everyone else's picks.
 
-- ✅ **Contract Hot Reload**: Your frontend auto-adapts to your smart contract as you edit it.
-- 🪝 **[Custom hooks](https://docs.scaffoldeth.io/hooks/)**: Collection of React hooks wrapper around [wagmi](https://wagmi.sh/) to simplify interactions with smart contracts with typescript autocompletion.
-- 🧱 [**Components**](https://docs.scaffoldeth.io/components/): Collection of common web3 components to quickly build your frontend.
-- 🔥 **Burner Wallet & Local Faucet**: Quickly test your application with a burner wallet and local faucet.
-- 🔐 **Integration with Wallet Providers**: Connect to different wallet providers and interact with the Ethereum network.
+### Alice vs Bob: A User Journey
 
-![Debug Contracts tab](https://github.com/scaffold-eth/scaffold-eth-2/assets/55535804/b237af0c-5027-4849-a5c1-2e31495cccb1)
+**1. Alice creates a league**
 
-## Requirements
+Alice thinks she's spotted a whale who's about to have a great day. She creates a league:
+- Entry fee: 100 CLAWD
+- Duration: 1 day
+- Max players: 2 (head to head)
+- Picks per player: 1
+- House cut: 5%
 
-Before you begin, you need to install the following tools:
+She enters the wallet address of the trader she's betting on — `0xWhale123...` — and pays 100 CLAWD to enter. She's in.
 
-- [Node (>= v20.18.3)](https://nodejs.org/en/download/)
-- Yarn ([v1](https://classic.yarnpkg.com/en/docs/install/) or [v2+](https://yarnpkg.com/getting-started/install))
-- [Git](https://git-scm.com/downloads)
+**2. Bob joins**
 
-## Quickstart
+Bob sees Alice's league on the home page. He's been watching a different degen who's been on a tear. He picks `0xDegen456...`, pays 100 CLAWD, and joins.
 
-To get started with Scaffold-ETH 2, follow the steps below:
+The league is full (2/2 players), so it **auto-starts**. The 24-hour clock begins.
 
-1. Install dependencies if it was skipped in CLI:
+**3. The clock runs**
 
-```
-cd my-dapp-example
+For the next 24 hours, both wallets go about their business — trading, holding, farming, whatever they do onchain. Alice and Bob can't do anything but watch and sweat.
+
+**4. Results come in**
+
+When the timer ends, an offchain oracle (the "reporter") checks which wallet performed better and submits the winner onchain. Let's say Alice's whale crushed it.
+
+A **1-hour dispute window** opens — Bob can challenge the results if he thinks something's off.
+
+**5. Payout**
+
+After the dispute window closes:
+- Total pot: 200 CLAWD
+- House cut (5%): 10 CLAWD → **burned to 0xdead** 🔥
+- Alice claims: **190 CLAWD**
+- Bob gets: nothing. Better luck next time.
+
+### Safety Nets
+
+- **Stale leagues**: If a league never fills after 7 days, anyone can cancel it and players get refunded.
+- **Missing results**: If no results are submitted within 24 hours after a league ends, it can be cancelled for refunds.
+- **Disputes**: Any player can dispute results within 1 hour. Disputed results are cleared and the reporter must resubmit.
+
+## What's Built
+
+- ✅ **Smart contract** — `FantasyLeague.sol` with 18/18 tests passing (ReentrancyGuard, SafeERC20, CEI pattern)
+- ✅ **Frontend** — League browser, create form, league detail page with join/claim/dispute flows
+- ✅ **Token burns** — House cut sent to 0xdead on every league settlement
+
+## What's Missing
+
+- ❌ **Automated oracle** — Right now the "reporter" is a trusted address that manually submits results. The big build is an offchain service that tracks wallet PnL and submits results automatically.
+- ❌ **Wallet performance tracking** — No UI yet showing how picked wallets are performing during a league.
+- ❌ **Production deployment** — Currently local only.
+
+## Quick Start
+
+```bash
+git clone https://github.com/clawdbotatg/clawd-fantasy.git
+cd clawd-fantasy
 yarn install
+yarn chain    # Start local Anvil chain
+yarn deploy   # Deploy contracts
+yarn start    # Start frontend at http://localhost:3000
 ```
 
-2. Run a local network in the first terminal:
+## Tech Stack
 
-```
-yarn chain
-```
-
-This command starts a local Ethereum network using Foundry. The network runs on your local machine and can be used for testing and development. You can customize the network configuration in `packages/foundry/foundry.toml`.
-
-3. On a second terminal, deploy the test contract:
-
-```
-yarn deploy
-```
-
-This command deploys a test smart contract to the local network. The contract is located in `packages/foundry/contracts` and can be modified to suit your needs. The `yarn deploy` command uses the deploy script located in `packages/foundry/script` to deploy the contract to the network. You can also customize the deploy script.
-
-4. On a third terminal, start your NextJS app:
-
-```
-yarn start
-```
-
-Visit your app on: `http://localhost:3000`. You can interact with your smart contract using the `Debug Contracts` page. You can tweak the app config in `packages/nextjs/scaffold.config.ts`.
-
-Run smart contract test with `yarn foundry:test`
-
-- Edit your smart contracts in `packages/foundry/contracts`
-- Edit your frontend homepage at `packages/nextjs/app/page.tsx`. For guidance on [routing](https://nextjs.org/docs/app/building-your-application/routing/defining-routes) and configuring [pages/layouts](https://nextjs.org/docs/app/building-your-application/routing/pages-and-layouts) checkout the Next.js documentation.
-- Edit your deployment scripts in `packages/foundry/script`
-
-
-## Documentation
-
-Visit our [docs](https://docs.scaffoldeth.io) to learn how to start building with Scaffold-ETH 2.
-
-To know more about its features, check out our [website](https://scaffoldeth.io).
-
-## Contributing to Scaffold-ETH 2
-
-We welcome contributions to Scaffold-ETH 2!
-
-Please see [CONTRIBUTING.MD](https://github.com/scaffold-eth/scaffold-eth-2/blob/main/CONTRIBUTING.md) for more information and guidelines for contributing to Scaffold-ETH 2.
+- **Contracts**: Solidity, Foundry, OpenZeppelin
+- **Frontend**: Next.js, RainbowKit, Wagmi, Viem
+- **Token**: $CLAWD on Base (`0x9f86dB9fc6f7c9408e8Fda3Ff8ce4e78ac7a6b07`)
+- **Framework**: [Scaffold-ETH 2](https://scaffoldeth.io)
