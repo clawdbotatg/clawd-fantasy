@@ -31,15 +31,13 @@ The league is full (2/2 players), so it **auto-starts**. The 24-hour clock begin
 
 For the next 24 hours, both wallets go about their business — trading, holding, farming, whatever they do onchain. Alice and Bob can't do anything but watch and sweat.
 
-**4. Results come in**
+**4. Settlement**
 
-When the timer ends, an offchain oracle (the "reporter") checks which wallet performed better and submits the winner onchain. Let's say Alice's whale crushed it.
+When the timer ends, **anyone** can call `settleLeague`. The contract reads each picked wallet's current ETH balance, compares it to the snapshot from league start, and calculates the % change. Best % gain wins. No oracles. No reporters. Just math on chain.
 
-A **1-hour dispute window** opens — Bob can challenge the results if he thinks something's off.
+Let's say Alice's whale went from 10 ETH → 15 ETH (+50%) while Bob's degen went 10 ETH → 12 ETH (+20%). Alice wins.
 
 **5. Payout**
-
-After the dispute window closes:
 - Total pot: 200 CLAWD
 - House cut (5%): 10 CLAWD → **burned to 0xdead** 🔥
 - Alice claims: **190 CLAWD**
@@ -59,8 +57,7 @@ After the dispute window closes:
 
 ## What's Missing
 
-- ❌ **Automated oracle** — Right now the "reporter" is a trusted address that manually submits results. The big build is an offchain service that tracks wallet PnL and submits results automatically.
-- ❌ **Wallet performance tracking** — No UI yet showing how picked wallets are performing during a league.
+- ❌ **Live score UI** — The contract has `getPlayerScore()` to check scores mid-league, but the frontend doesn't show live performance yet.
 - ❌ **Production deployment** — Currently local only.
 
 ## Quick Start

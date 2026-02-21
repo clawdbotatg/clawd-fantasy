@@ -42,10 +42,10 @@ const LeagueDetailClient = ({ id }: { id: string }) => {
   const { writeContractAsync: startAsync, isMining: startPending } = useScaffoldWriteContract({
     contractName: "FantasyLeague",
   });
-  const { writeContractAsync: claimAsync, isMining: claimPending } = useScaffoldWriteContract({
+  const { writeContractAsync: settleAsync, isMining: settlePending } = useScaffoldWriteContract({
     contractName: "FantasyLeague",
   });
-  const { writeContractAsync: disputeAsync, isMining: disputePending } = useScaffoldWriteContract({
+  const { writeContractAsync: claimAsync, isMining: claimPending } = useScaffoldWriteContract({
     contractName: "FantasyLeague",
   });
   const { writeContractAsync: refundAsync, isMining: refundPending } = useScaffoldWriteContract({
@@ -62,8 +62,8 @@ const LeagueDetailClient = ({ id }: { id: string }) => {
     );
   }
 
-  const [creator, entryFee, duration, maxPlayers, maxPicks, , endTime, totalPot, , status, resultSubmittedAt] =
-    league as unknown as [string, bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint, number, bigint];
+  const [creator, entryFee, duration, maxPlayers, maxPicks, , endTime, totalPot, , status] =
+    league as unknown as [string, bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint, number];
   const statusNum = Number(status);
   const playerCount = entries?.length ?? 0;
   const isFull = playerCount >= Number(maxPlayers);
@@ -71,9 +71,8 @@ const LeagueDetailClient = ({ id }: { id: string }) => {
   const isPlayer = entries?.some((e: any) => e.player.toLowerCase() === address?.toLowerCase());
   const isWinner = winners?.some((w: string) => w.toLowerCase() === address?.toLowerCase());
 
-  const disputeWindowEnd = Number(resultSubmittedAt) + 3600;
   const nowSec = Math.floor(Date.now() / 1000);
-  const inDisputeWindow = statusNum === 2 && nowSec < disputeWindowEnd;
+  const leagueEnded = statusNum === 1 && endTime > 0n && nowSec >= Number(endTime);
 
   const validJoinPicks = joinPicks.filter(p => p.length === 42 && p.startsWith("0x"));
 
@@ -117,15 +116,22 @@ const LeagueDetailClient = ({ id }: { id: string }) => {
           </div>
         </div>
 
-        {statusNum === 1 && endTime > 0n && (
+        {statusNum === 1 && endTime > 0n && !leagueEnded && (
           <div className="mt-3 text-center">
             <span className="opacity-50 text-sm mr-2">Ends in:</span>
             <CountdownTimer endTime={endTime} />
           </div>
         )}
+
+        {leagueEnded && (
+          <div className="mt-3 text-center text-[#FF4136] font-bold">
+            ⏰ League ended — ready to settle!
+          </div>
+        )}
       </div>
 
       <div className="w-full space-y-4 mb-6">
+        {/* Creator can start early if 2+ players */}
         {statusNum === 0 && isCreator && playerCount >= 2 && (
           <button
             className="btn bg-green-600 text-white hover:bg-green-700 w-full"
@@ -136,9 +142,11 @@ const LeagueDetailClient = ({ id }: { id: string }) => {
           </button>
         )}
 
+        {/* Join form */}
         {statusNum === 0 && !isFull && !isPlayer && spender && (
           <div className="bg-base-200 rounded-lg p-4 space-y-3">
             <h3 className="font-bold">Join League</h3>
+            <p className="text-xs opacity-50">Pick wallet address(es) you think will gain the most ETH</p>
             {joinPicks.map((pick, i) => (
               <input
                 key={i}
@@ -169,7 +177,19 @@ const LeagueDetailClient = ({ id }: { id: string }) => {
           </div>
         )}
 
-        {statusNum === 2 && isWinner && !inDisputeWindow && (
+        {/* Settle button — anyone can call after league ends */}
+        {leagueEnded && (
+          <button
+            className="btn bg-[#FF4136] text-white hover:bg-[#FF4136]/80 w-full"
+            disabled={settlePending}
+            onClick={() => settleAsync({ functionName: "settleLeague", args: [leagueId] })}
+          >
+            {settlePending ? <span className="loading loading-spinner loading-sm" /> : "⚡ Settle League"}
+          </button>
+        )}
+
+        {/* Claim winnings */}
+        {statusNum === 2 && isWinner && (
           <button
             className="btn bg-[#FFD700] text-black hover:bg-[#FFD700]/80 w-full"
             disabled={claimPending}
@@ -179,16 +199,7 @@ const LeagueDetailClient = ({ id }: { id: string }) => {
           </button>
         )}
 
-        {statusNum === 2 && isPlayer && inDisputeWindow && (
-          <button
-            className="btn btn-warning w-full"
-            disabled={disputePending}
-            onClick={() => disputeAsync({ functionName: "disputeResults", args: [leagueId] })}
-          >
-            {disputePending ? <span className="loading loading-spinner loading-sm" /> : "⚠️ Dispute Results"}
-          </button>
-        )}
-
+        {/* Refund on cancelled leagues */}
         {statusNum === 3 && isPlayer && (
           <button
             className="btn btn-outline w-full"

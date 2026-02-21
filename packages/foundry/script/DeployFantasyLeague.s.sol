@@ -11,8 +11,8 @@ contract DeployFantasyLeague is ScaffoldETHDeploy {
         MockERC20 mockClawd = new MockERC20("CLAWD", "CLAWD");
         console.log("MockCLAWD deployed at:", address(mockClawd));
 
-        // Deploy FantasyLeague with deployer as reporter
-        FantasyLeague fantasyLeague = new FantasyLeague(address(mockClawd), deployer);
+        // Deploy FantasyLeague (no oracle needed — fully onchain settlement)
+        FantasyLeague fantasyLeague = new FantasyLeague(address(mockClawd));
         console.log("FantasyLeague deployed at:", address(fantasyLeague));
 
         // Register deployments for SE2 frontend

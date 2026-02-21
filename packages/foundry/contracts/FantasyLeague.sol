@@ -6,11 +6,13 @@ import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.s
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
+/// @title FantasyLeague — Fully onchain fantasy crypto betting
+/// @notice Pick wallet addresses you think will gain the most ETH. No oracles. No reporters.
+///         Balances are snapshotted at league start and compared at settlement. Best % gain wins.
 contract FantasyLeague is Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     IERC20 public clawd;
-    address public reporter;
     uint256 public leagueCount;
 
     enum LeagueStatus { Created, Active, Settled, Cancelled }
@@ -26,7 +28,7 @@ contract FantasyLeague is Ownable, ReentrancyGuard {
         uint256 totalPot;
         uint256 houseCutBps;
         LeagueStatus status;
-        uint256 resultSubmittedAt;
+        uint256 settledAt;
         uint256 createdAt;
     }
 
@@ -44,27 +46,22 @@ contract FantasyLeague is Ownable, ReentrancyGuard {
     mapping(uint256 => mapping(address => uint256)) public playerIndex;
     // leagueId => winners
     mapping(uint256 => address[]) public winners;
-    // leagueId => player => hasDisputed
-    mapping(uint256 => mapping(address => bool)) public hasDisputed;
     // leagueId => whether house cut has been burned
     mapping(uint256 => bool) public houseCutBurned;
+
+    // Onchain balance snapshots: leagueId => wallet pick => ETH balance at league start
+    mapping(uint256 => mapping(address => uint256)) public startingBalance;
 
     event LeagueCreated(uint256 indexed leagueId, address indexed creator, uint256 entryFee, uint256 duration);
     event PlayerJoined(uint256 indexed leagueId, address indexed player);
     event LeagueStarted(uint256 indexed leagueId, uint256 startTime, uint256 endTime);
-    event ResultsReported(uint256 indexed leagueId, address[] winners);
-    event ResultsDisputed(uint256 indexed leagueId, address indexed disputer);
+    event LeagueSettled(uint256 indexed leagueId, address[] winners);
     event WinningsClaimed(uint256 indexed leagueId, address indexed winner, uint256 amount);
     event LeagueCancelled(uint256 indexed leagueId);
     event RefundClaimed(uint256 indexed leagueId, address indexed player, uint256 amount);
 
-    constructor(address _clawd, address _reporter) Ownable(msg.sender) {
+    constructor(address _clawd) Ownable(msg.sender) {
         clawd = IERC20(_clawd);
-        reporter = _reporter;
-    }
-
-    function setReporter(address _reporter) external onlyOwner {
-        reporter = _reporter;
     }
 
     function createLeague(
@@ -96,20 +93,18 @@ contract FantasyLeague is Ownable, ReentrancyGuard {
             totalPot: entryFee,
             houseCutBps: houseCutBps,
             status: LeagueStatus.Created,
-            resultSubmittedAt: 0,
+            settledAt: 0,
             createdAt: block.timestamp
         });
 
-        // Creator auto-joins
         entries[leagueId].push(Entry({ player: msg.sender, picks: picks, claimed: false }));
-        playerIndex[leagueId][msg.sender] = 1; // index 0 + 1
+        playerIndex[leagueId][msg.sender] = 1;
 
         clawd.safeTransferFrom(msg.sender, address(this), entryFee);
 
         emit LeagueCreated(leagueId, msg.sender, entryFee, duration);
         emit PlayerJoined(leagueId, msg.sender);
 
-        // Auto-start if full (maxPlayers == 1 not possible since min is 2, but check anyway)
         if (entries[leagueId].length == maxPlayers) {
             _startLeague(leagueId);
         }
@@ -124,7 +119,7 @@ contract FantasyLeague is Ownable, ReentrancyGuard {
         _validatePicks(picks);
 
         entries[leagueId].push(Entry({ player: msg.sender, picks: picks, claimed: false }));
-        playerIndex[leagueId][msg.sender] = entries[leagueId].length; // 1-indexed
+        playerIndex[leagueId][msg.sender] = entries[leagueId].length;
 
         league.totalPot += league.entryFee;
 
@@ -145,50 +140,72 @@ contract FantasyLeague is Ownable, ReentrancyGuard {
         _startLeague(leagueId);
     }
 
-    function reportResults(uint256 leagueId, address[] calldata _winners) external {
-        require(msg.sender == reporter, "Only reporter");
+    /// @notice Settle a league. Anyone can call this after the league ends.
+    ///         Reads current ETH balances of all picks, compares to starting snapshots,
+    ///         and determines the winner(s) by best average % change.
+    function settleLeague(uint256 leagueId) external {
         League storage league = _leagues[leagueId];
         require(league.status == LeagueStatus.Active, "Not active");
         require(block.timestamp >= league.endTime, "League not ended");
-        require(_winners.length >= 1, "Need >= 1 winner");
 
-        // Validate winners are players
-        for (uint256 i = 0; i < _winners.length; i++) {
-            require(playerIndex[leagueId][_winners[i]] != 0, "Winner not a player");
+        Entry[] storage leagueEntries = entries[leagueId];
+        uint256 numEntries = leagueEntries.length;
+
+        // Calculate score for each player (in basis points, can be negative)
+        int256 bestScore = type(int256).min;
+        uint256 winnerCount = 0;
+
+        // First pass: find the best score
+        int256[] memory scores = new int256[](numEntries);
+        for (uint256 i = 0; i < numEntries; i++) {
+            address[] storage picks = leagueEntries[i].picks;
+            int256 totalScore = 0;
+
+            for (uint256 j = 0; j < picks.length; j++) {
+                address pick = picks[j];
+                uint256 startBal = startingBalance[leagueId][pick];
+                uint256 endBal = pick.balance;
+
+                if (startBal > 0) {
+                    // % change in basis points: ((end - start) / start) * 10000
+                    totalScore += (int256(endBal) - int256(startBal)) * 10000 / int256(startBal);
+                } else if (endBal > 0) {
+                    totalScore += 10000; // 0 → something = +100%
+                }
+                // 0 → 0 = 0 contribution
+            }
+
+            // Average across picks
+            scores[i] = totalScore / int256(picks.length);
+
+            if (scores[i] > bestScore) {
+                bestScore = scores[i];
+            }
+        }
+
+        // Second pass: collect all players with the best score (ties split the pot)
+        for (uint256 i = 0; i < numEntries; i++) {
+            if (scores[i] == bestScore) {
+                winners[leagueId].push(leagueEntries[i].player);
+                winnerCount++;
+            }
         }
 
         league.status = LeagueStatus.Settled;
-        league.resultSubmittedAt = block.timestamp;
-        winners[leagueId] = _winners;
+        league.settledAt = block.timestamp;
 
-        emit ResultsReported(leagueId, _winners);
-    }
-
-    function disputeResults(uint256 leagueId) external {
-        League storage league = _leagues[leagueId];
-        require(league.status == LeagueStatus.Settled, "Not settled");
-        require(playerIndex[leagueId][msg.sender] != 0, "Not a player");
-        require(block.timestamp <= league.resultSubmittedAt + 1 hours, "Dispute window closed");
-        require(!hasDisputed[leagueId][msg.sender], "Already disputed");
-
-        hasDisputed[leagueId][msg.sender] = true;
-        league.status = LeagueStatus.Active;
-        delete winners[leagueId];
-
-        emit ResultsDisputed(leagueId, msg.sender);
+        emit LeagueSettled(leagueId, winners[leagueId]);
     }
 
     function claimWinnings(uint256 leagueId) external nonReentrant {
         League storage league = _leagues[leagueId];
         require(league.status == LeagueStatus.Settled, "Not settled");
-        require(block.timestamp > league.resultSubmittedAt + 1 hours, "Dispute window open");
 
         uint256 idx = playerIndex[leagueId][msg.sender];
         require(idx != 0, "Not a player");
         Entry storage entry = entries[leagueId][idx - 1];
         require(!entry.claimed, "Already claimed");
 
-        // Check caller is a winner
         bool isWinner = false;
         address[] storage w = winners[leagueId];
         for (uint256 i = 0; i < w.length; i++) {
@@ -205,7 +222,6 @@ contract FantasyLeague is Ownable, ReentrancyGuard {
         uint256 netPot = league.totalPot - houseCut;
         uint256 share = netPot / w.length;
 
-        // Burn house cut on first claim
         if (houseCut > 0 && !houseCutBurned[leagueId]) {
             houseCutBurned[leagueId] = true;
             clawd.safeTransfer(address(0xdead), houseCut);
@@ -247,11 +263,11 @@ contract FantasyLeague is Ownable, ReentrancyGuard {
         emit RefundClaimed(leagueId, msg.sender, league.entryFee);
     }
 
+    // View functions
     function leagues(uint256 leagueId) external view returns (League memory) {
         return _leagues[leagueId];
     }
 
-    // View helpers
     function getEntries(uint256 leagueId) external view returns (Entry[] memory) {
         return entries[leagueId];
     }
@@ -260,11 +276,47 @@ contract FantasyLeague is Ownable, ReentrancyGuard {
         return winners[leagueId];
     }
 
+    /// @notice Get the current score for a player's picks (callable while league is active)
+    function getPlayerScore(uint256 leagueId, address player) external view returns (int256) {
+        uint256 idx = playerIndex[leagueId][player];
+        require(idx != 0, "Not a player");
+        Entry storage entry = entries[leagueId][idx - 1];
+
+        int256 totalScore = 0;
+        for (uint256 j = 0; j < entry.picks.length; j++) {
+            address pick = entry.picks[j];
+            uint256 startBal = startingBalance[leagueId][pick];
+            uint256 endBal = pick.balance;
+
+            if (startBal > 0) {
+                totalScore += (int256(endBal) - int256(startBal)) * 10000 / int256(startBal);
+            } else if (endBal > 0) {
+                totalScore += 10000;
+            }
+        }
+
+        return totalScore / int256(entry.picks.length);
+    }
+
+    // Internal functions
     function _startLeague(uint256 leagueId) internal {
         League storage league = _leagues[leagueId];
         league.status = LeagueStatus.Active;
         league.startTime = block.timestamp;
         league.endTime = block.timestamp + league.duration;
+
+        // Snapshot starting ETH balances for all picks
+        Entry[] storage leagueEntries = entries[leagueId];
+        for (uint256 i = 0; i < leagueEntries.length; i++) {
+            address[] storage picks = leagueEntries[i].picks;
+            for (uint256 j = 0; j < picks.length; j++) {
+                address pick = picks[j];
+                if (startingBalance[leagueId][pick] == 0) {
+                    startingBalance[leagueId][pick] = pick.balance;
+                }
+            }
+        }
+
         emit LeagueStarted(leagueId, league.startTime, league.endTime);
     }
 
