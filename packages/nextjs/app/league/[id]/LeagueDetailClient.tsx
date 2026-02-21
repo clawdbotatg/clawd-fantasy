@@ -62,8 +62,18 @@ const LeagueDetailClient = ({ id }: { id: string }) => {
     );
   }
 
-  const [creator, entryFee, duration, maxPlayers, maxPicks, , endTime, totalPot, , status] =
-    league as unknown as [string, bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint, number];
+  const [creator, entryFee, duration, maxPlayers, maxPicks, , endTime, totalPot, , status] = league as unknown as [
+    string,
+    bigint,
+    bigint,
+    bigint,
+    bigint,
+    bigint,
+    bigint,
+    bigint,
+    bigint,
+    number,
+  ];
   const statusNum = Number(status);
   const playerCount = entries?.length ?? 0;
   const isFull = playerCount >= Number(maxPlayers);
@@ -124,9 +134,7 @@ const LeagueDetailClient = ({ id }: { id: string }) => {
         )}
 
         {leagueEnded && (
-          <div className="mt-3 text-center text-[#FF4136] font-bold">
-            ⏰ League ended — ready to settle!
-          </div>
+          <div className="mt-3 text-center text-[#FF4136] font-bold">⏰ League ended — ready to settle!</div>
         )}
       </div>
 

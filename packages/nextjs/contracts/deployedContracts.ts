@@ -22,6 +22,39 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "addToken",
+          inputs: [
+            {
+              name: "token",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "pair",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "isToken0",
+              type: "bool",
+              internalType: "bool",
+            },
+            {
+              name: "decimals",
+              type: "uint8",
+              internalType: "uint8",
+            },
+            {
+              name: "pairedWithETH",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
           name: "cancelLeague",
           inputs: [
             {
@@ -141,6 +174,45 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "ethIsToken0InPair",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "ethUsdcPair",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "getETHPrice",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "getEntries",
           inputs: [
             {
@@ -195,6 +267,38 @@ const deployedContracts = {
               name: "",
               type: "int256",
               internalType: "int256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "getPortfolioValue",
+          inputs: [
+            {
+              name: "wallet",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "totalUSDC",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "getTokenRegistryLength",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
             },
           ],
           stateMutability: "view",
@@ -388,8 +492,39 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "removeToken",
+          inputs: [
+            {
+              name: "index",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
           name: "renounceOwnership",
           inputs: [],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "setEthUsdcPair",
+          inputs: [
+            {
+              name: "_pair",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "_ethIsToken0",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
           outputs: [],
           stateMutability: "nonpayable",
         },
@@ -421,7 +556,7 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "startingBalance",
+          name: "startingValue",
           inputs: [
             {
               name: "",
@@ -445,6 +580,45 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "tokenRegistry",
+          inputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "token",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "pair",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "isToken0",
+              type: "bool",
+              internalType: "bool",
+            },
+            {
+              name: "decimals",
+              type: "uint8",
+              internalType: "uint8",
+            },
+            {
+              name: "pairedWithETH",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "transferOwnership",
           inputs: [
             {
@@ -455,6 +629,19 @@ const deployedContracts = {
           ],
           outputs: [],
           stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "usdcDecimals",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "uint8",
+              internalType: "uint8",
+            },
+          ],
+          stateMutability: "view",
         },
         {
           type: "function",
@@ -633,6 +820,44 @@ const deployedContracts = {
         },
         {
           type: "event",
+          name: "TokenAdded",
+          inputs: [
+            {
+              name: "index",
+              type: "uint256",
+              indexed: true,
+              internalType: "uint256",
+            },
+            {
+              name: "token",
+              type: "address",
+              indexed: false,
+              internalType: "address",
+            },
+            {
+              name: "pair",
+              type: "address",
+              indexed: false,
+              internalType: "address",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "TokenRemoved",
+          inputs: [
+            {
+              name: "index",
+              type: "uint256",
+              indexed: true,
+              internalType: "uint256",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
           name: "WinningsClaimed",
           inputs: [
             {
@@ -701,7 +926,7 @@ const deployedContracts = {
   },
   31337: {
     MockERC20: {
-      address: "0xb19b36b1456e65e3a6d514d3f715f204bd59f431",
+      address: "0xe1aa25618fa0c7a1cfdab5d6b456af611873b629",
       abi: [
         {
           type: "constructor",
@@ -1047,10 +1272,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 3,
+      deployedOnBlock: 5,
     },
     FantasyLeague: {
-      address: "0x8ce361602b935680e8dec218b820ff5056beb7af",
+      address: "0xe1da8919f262ee86f9be05059c9280142cf23f48",
       abi: [
         {
           type: "constructor",
@@ -1061,6 +1286,39 @@ const deployedContracts = {
               internalType: "address",
             },
           ],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "addToken",
+          inputs: [
+            {
+              name: "token",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "pair",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "isToken0",
+              type: "bool",
+              internalType: "bool",
+            },
+            {
+              name: "decimals",
+              type: "uint8",
+              internalType: "uint8",
+            },
+            {
+              name: "pairedWithETH",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
+          outputs: [],
           stateMutability: "nonpayable",
         },
         {
@@ -1184,6 +1442,45 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "ethIsToken0InPair",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "ethUsdcPair",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "getETHPrice",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "getEntries",
           inputs: [
             {
@@ -1238,6 +1535,38 @@ const deployedContracts = {
               name: "",
               type: "int256",
               internalType: "int256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "getPortfolioValue",
+          inputs: [
+            {
+              name: "wallet",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "totalUSDC",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "getTokenRegistryLength",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
             },
           ],
           stateMutability: "view",
@@ -1431,8 +1760,39 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "removeToken",
+          inputs: [
+            {
+              name: "index",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
           name: "renounceOwnership",
           inputs: [],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "setEthUsdcPair",
+          inputs: [
+            {
+              name: "_pair",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "_ethIsToken0",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
           outputs: [],
           stateMutability: "nonpayable",
         },
@@ -1464,7 +1824,7 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "startingBalance",
+          name: "startingValue",
           inputs: [
             {
               name: "",
@@ -1488,6 +1848,45 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "tokenRegistry",
+          inputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "token",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "pair",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "isToken0",
+              type: "bool",
+              internalType: "bool",
+            },
+            {
+              name: "decimals",
+              type: "uint8",
+              internalType: "uint8",
+            },
+            {
+              name: "pairedWithETH",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "transferOwnership",
           inputs: [
             {
@@ -1498,6 +1897,19 @@ const deployedContracts = {
           ],
           outputs: [],
           stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "usdcDecimals",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "uint8",
+              internalType: "uint8",
+            },
+          ],
+          stateMutability: "view",
         },
         {
           type: "function",
@@ -1676,6 +2088,44 @@ const deployedContracts = {
         },
         {
           type: "event",
+          name: "TokenAdded",
+          inputs: [
+            {
+              name: "index",
+              type: "uint256",
+              indexed: true,
+              internalType: "uint256",
+            },
+            {
+              name: "token",
+              type: "address",
+              indexed: false,
+              internalType: "address",
+            },
+            {
+              name: "pair",
+              type: "address",
+              indexed: false,
+              internalType: "address",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "TokenRemoved",
+          inputs: [
+            {
+              name: "index",
+              type: "uint256",
+              indexed: true,
+              internalType: "uint256",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
           name: "WinningsClaimed",
           inputs: [
             {
@@ -1739,7 +2189,7 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 4,
+      deployedOnBlock: 6,
     },
   },
 } as const;
