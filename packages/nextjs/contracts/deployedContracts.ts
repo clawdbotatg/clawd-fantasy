@@ -923,6 +923,49 @@ const deployedContracts = {
       inheritedFunctions: {},
       deployedOnBlock: 42365648,
     },
+    MockERC20: {
+      address: "0x9f86dB9fc6f7c9408e8Fda3Ff8ce4e78ac7a6b07",
+      abi: [
+        {
+          type: "function",
+          name: "allowance",
+          inputs: [
+            { name: "owner", type: "address", internalType: "address" },
+            { name: "spender", type: "address", internalType: "address" },
+          ],
+          outputs: [{ name: "", type: "uint256", internalType: "uint256" }],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "approve",
+          inputs: [
+            { name: "spender", type: "address", internalType: "address" },
+            { name: "amount", type: "uint256", internalType: "uint256" },
+          ],
+          outputs: [{ name: "", type: "bool", internalType: "bool" }],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "balanceOf",
+          inputs: [{ name: "account", type: "address", internalType: "address" }],
+          outputs: [{ name: "", type: "uint256", internalType: "uint256" }],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "transfer",
+          inputs: [
+            { name: "to", type: "address", internalType: "address" },
+            { name: "amount", type: "uint256", internalType: "uint256" },
+          ],
+          outputs: [{ name: "", type: "bool", internalType: "bool" }],
+          stateMutability: "nonpayable",
+        },
+      ],
+      inheritedFunctions: {},
+    },
   },
   31337: {
     MockERC20: {
